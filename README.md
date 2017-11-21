@@ -29,11 +29,11 @@ gulp.task('vue-compile', function() {
 
 * v0: Vueify's API is used internally. Therefore, any valid option for Vueify is valid here as well. See [Vueify options here](https://github.com/vuejs/vueify#configuring-options). Additionally, `options.ESModules` boolean option is available for removing the closure that Vueify adds automatically (which breaks ES modules). Passing `modules: false` in Babel's `env` preset automatically activates this option.
 
-* v1: Will use [`vue-component-compiler`](https://github.com/vuejs/vue-component-compiler) internally when it's ready ([info here](https://github.com/vuejs/vue-component-compiler/issues/28)).
+* v1: Uses [`vue-component-compiler`](https://github.com/vuejs/vue-component-compiler) internally ([more info here](https://github.com/vuejs/vue-component-compiler/issues/28)). `options.esModule` (default `true`), `options.parserConfig`, `options.templateCompilerConfig`, `options.babel`. Beta release does not support `style` tags.
 
 ## Examples
 
-* v0: Compiling `*.vue` components to plain JavaScript using Babel and ES modules:
+* Compiling `*.vue` components to plain JavaScript using Babel and ES modules:
 
 ```javascript
 return gulp.src('components/**/*.vue')
@@ -43,7 +43,7 @@ return gulp.src('components/**/*.vue')
       babelrc: false,
       presets: [
         ['env', {
-          modules: false, // Keep ES modules
+          modules: false, // Keep ES modules in 'script' tag
           targets: {
             browsers: [ '> 1%', 'last 2 versions' ]
           }
