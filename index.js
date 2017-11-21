@@ -4,13 +4,18 @@
 
 var through = require('through2');
 var gutil = require('gulp-util');
-var compiler = require('vueify').compiler;
+var compiler = require('vue-component-compiler');
+var babel = require('babel-core');
 var path = require('path');
 
 var PluginError = gutil.PluginError;
 var PLUGIN_NAME = 'gulp-vue-compiler';
 
 function gulpVueCompiler (options) {
+  options = Object.assign({ esModule: true }, options || {});
+  var parserConfig = Object.assign({ needMap: false }, options.parserConfig || {});
+  var templateCompilerConfig = Object.assign({}, options.templateCompilerConfig || {}, { esModule: options.esModule });
+
   return through.obj(function (file, encode, callback) {
     if (file.isNull()) {
       return callback(null, file);
@@ -20,46 +25,45 @@ function gulpVueCompiler (options) {
       return callback();
     }
 
-    if (options) {
-      compiler.applyConfig(options);
+    if (options.newExtension) {
+      file.path = gutil.replaceExtension(file.path, '.' + options.newExtension);
     }
 
-    compiler.compile(file.contents.toString(), file.path, function (err, result) {
-      if (err) {
-        this.emit('error', new PluginError(PLUGIN_NAME,
-          'In file ' + path.relative(process.cwd(), file.path) + ':\n' + err.message));
-        return callback();
+    try {
+      var descriptor = compiler.parse(file.contents.toString(), file.path, parserConfig);
+      var script = descriptor.script.content;
+      var template = compiler.compileTemplate({
+        code: descriptor.template.content,
+        descriptor: descriptor.template
+      }, file.path, templateCompilerConfig).code;
+
+      // Assemble ESM / CJS
+      var replaceExport, exportDefault;
+      if (options.esModule) {
+        replaceExport = /^export\s+default/m;
+        exportDefault = '\n\nexport default';
+      } else {
+        replaceExport = /^module\.exports =/m;
+        exportDefault = '\n\nmodule.exports =';
       }
 
-      if (options && options.newExtension) {
-        file.path = gutil.replaceExtension(file.path, '.' + options.newExtension);
-      }
+      script = script.replace(replaceExport, 'var __script__ =');
+      template = template.replace(replaceExport, 'var __template__ =');
+      var component = [script, template, exportDefault + ' Object.assign({}, __script__, __template__);'].join('\n\n');
+      component = babel.transform(component, options.babel).code;
 
-      if (options) {
-        // options.ESModules or options.babel.presets->env.modules === false
-
-        var esm = options.ESModules;
-        if (!esm && options.babel && options.babel.presets instanceof Array) {
-          esm = options.babel.presets.some(function(preset) {
-            if (preset instanceof Array && preset[1] && preset[1].modules === false) {
-              return true;
-            }
-          });
-        }
-
-        // Remove closure automatically added by Vueify that breaks ESModules
-        if (esm) {
-          result = result.substring(result.indexOf('import '));
-          result = result.replace(/^}\)\(\)(\nif\s+\(module\.exports\.__esModule)/m, '$1');
-        }
-      }
-
-      file.contents = new Buffer(result);
+      file.contents = new Buffer(component);
       callback(null, file);
-    }.bind(this));
+
+    } catch (err) {
+      this.emit('error', new PluginError(PLUGIN_NAME,
+        'In file ' + path.relative(process.cwd(), file.path) + ':\n' + err.message));
+      return callback();
+    }
   });
 }
 
 module.exports = gulpVueCompiler;
 
 })()
+
