@@ -3,12 +3,12 @@
 'use strict';
 
 var through = require('through2');
-var gutil = require('gulp-util');
+var PluginError = require('plugin-error')
+var replaceExtension = require('replace-ext');
 var compiler = require('vue-component-compiler');
 var babel = require('babel-core');
 var path = require('path');
 
-var PluginError = gutil.PluginError;
 var PLUGIN_NAME = 'gulp-vue-compiler';
 
 function gulpVueCompiler (options) {
@@ -26,7 +26,7 @@ function gulpVueCompiler (options) {
     }
 
     if (options.newExtension) {
-      file.path = gutil.replaceExtension(file.path, '.' + options.newExtension);
+      file.path = replaceExtension(file.path, '.' + options.newExtension);
     }
 
     try {
