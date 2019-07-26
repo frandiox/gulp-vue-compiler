@@ -1,6 +1,6 @@
 {
   "name": "gulp-vue-compiler",
-  "version": "1.0.0-beta.0",
+  "version": "1.0.0-beta.1",
   "description": "Vue single file component compiler plugin for Gulp",
   "main": "index.js",
   "scripts": {
